@@ -388,7 +388,7 @@ createProcedureP = do
   P.choice [keywordP "is", keywordP "as"]
   (e, createProcedureImpl) <- createProcedureImplP
   pure $ CreateProcedure
-      { createProcedureInfo = kCreate -- <> e
+      { createProcedureInfo = kCreate <> e
       , createProcedureOrReplace = orReplace
       , createProcedureName = procedureName
       , createProcedureParams = createProcedureParams
@@ -420,6 +420,19 @@ dataTypeP = P.choice
       [ (VARCHAR2,) <$> keywordP "varchar2" 
       ]
 
+longDataTypeP :: Parser (DataType RawNames Range)
+longDataTypeP = P.choice
+  [ do
+      (s, r) <- scalarTypeP
+      return $ DataTypeScalar r s
+  ]
+  where
+    scalarTypeP :: Parser (ScalarType, Range)
+    scalarTypeP = P.choice
+      [ (VARCHAR2,) <$> keywordP "varchar2" 
+      ]
+
+
 expressionP :: Parser (Expression r a)
 expressionP = undefined
 
@@ -444,8 +457,60 @@ parameterDeclarationP = do
     ]
   return $ ParameterDeclaration (Parameter s r) parameterBody
 
+procedureItemList1P :: Parser (Range, [ProcedureItemList1Item r a])
+procedureItemList1P = do
+  xs <- flip P.endBy1 (symbolP ";") $ P.choice
+    [ -- typeDefinitionP
+      -- cursorDefinitionP
+      itemDeclarationP
+      -- functionDeclarationP
+      -- procedureDeclarationP
+    ]
+  undefined
+  where
+    typeDefinitionP = undefined
+    cursorDefinitionP = undefined
+    itemDeclarationP = P.choice
+        [ collectionVariableDeclarationP
+        , constantDeclarationP
+        , cursorVariableDeclarationP
+        , exceptionDeclarationP
+        , recordVariableDeclarationP
+        , variableDeclarationP
+        ]
+    functionDeclarationP = undefined
+    procedureDeclarationP = undefined
+
+    collectionVariableDeclarationP = undefined
+    constantDeclarationP = undefined
+    cursorVariableDeclarationP = undefined
+    exceptionDeclarationP = undefined
+    recordVariableDeclarationP = undefined
+    variableDeclarationP = do
+      (variable, r) <- nameP (const True)
+      dataTypeP
+      P.optionMaybe $ do
+        P.optionMaybe $ keywordP "not" >> keywordP "null"
+        P.choice [ symbolP ":=", keywordP "default" ]
+        expressionP
+        undefined
+
+procedureItemList2P :: Parser (Range, [ProcedureItemList2Item r a])
+procedureItemList2P = undefined
+
+maybeThese :: Maybe a -> Maybe b -> Maybe (These a b)
+maybeThese (Just a) (Just b) = Just (These a b)
+maybeThese (Just a) _ = Just (This a)
+maybeThese _ (Just b) = Just (That b)
+maybeThese _ _ = Nothing
+
 procedureDeclareSectionP :: Parser (Range, (ProcedureDeclareSection RawNames Range))
-procedureDeclareSectionP = undefined
+procedureDeclareSectionP = P.try $ do
+  (r0, itemList1) <- NE.unzip <$> P.optionMaybe procedureItemList1P
+  (r1, itemList2) <- NE.unzip <$> P.optionMaybe procedureItemList2P
+  let Just itemThese = maybeThese itemList1 itemList2
+  let Just r' = (r0 <> r1)
+  return (r', ProcedureDeclareSection $ itemThese)
 
 procedureBodyP :: Parser (Range, (ProcedureBody RawNames Range))
 procedureBodyP = undefined

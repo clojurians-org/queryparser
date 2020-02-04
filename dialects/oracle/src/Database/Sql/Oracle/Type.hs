@@ -7,6 +7,7 @@ module Database.Sql.Oracle.Type where
 
 import GHC.Generics
 import Data.Data hiding (DataType)
+import Data.These
 
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -331,13 +332,16 @@ data DataType r a
   | DataTypeAttribute a (TypeAttribute r a)
 deriving instance Generic (DataType r a)
 deriving instance ConstrainSNames Show r a => Show (DataType r a)
+deriving instance ConstrainSASNames Functor r => Functor (DataType r)
+deriving instance ConstrainSASNames Foldable r => Foldable (DataType r)
+deriving instance ConstrainSASNames Traversable r => Traversable (DataType r)
 
-data CollectionType r a = CollectionType a deriving (Generic, Show)
-data ObjectType r a = ObjectType a deriving (Generic, Show)
-data RecordType r a = RecordType a deriving (Generic, Show)
-data CursorType r a = CursorType a deriving (Generic, Show)
-data RowType r a = RowType a deriving (Generic, Show)
-data TypeAttribute r a = TypeAttribute a deriving (Generic, Show)
+data CollectionType r a = CollectionType a deriving (Generic, Show, Functor, Foldable, Traversable)
+data ObjectType r a = ObjectType a deriving (Generic, Show, Functor, Foldable, Traversable)
+data RecordType r a = RecordType a deriving (Generic, Show, Functor, Foldable, Traversable)
+data CursorType r a = CursorType a deriving (Generic, Show, Functor, Foldable, Traversable)
+data RowType r a = RowType a deriving (Generic, Show, Functor, Foldable, Traversable)
+data TypeAttribute r a = TypeAttribute a deriving (Generic, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/cd/B28359_01/appdev.111/b28370/datatypes.htm#i43252
 data ScalarType
@@ -365,28 +369,44 @@ data CreateProcedureImpl r a
 deriving instance Generic (CreateProcedureImpl r a)
 deriving instance ConstrainSNames Show r a => Show (CreateProcedureImpl r a)
 
-data ProcedureDeclareSection r a = These (ProcedureItemList1 r a) (ProcedureItemList2 r a)
+data ProcedureDeclareSection r a
+  = ProcedureDeclareSection (These [ProcedureItemList1Item r a] [ProcedureItemList2Item r a])
 deriving instance Generic (ProcedureDeclareSection r a)
 deriving instance ConstrainSNames Show r a => Show (ProcedureDeclareSection r a)
-deriving instance ConstrainSASNames Functor r => Functor (ProcedureDeclareSection r)
-deriving instance ConstrainSASNames Foldable r => Foldable (ProcedureDeclareSection r)
-deriving instance ConstrainSASNames Traversable r => Traversable (ProcedureDeclareSection r)
+-- deriving instance ConstrainSASNames Functor r => Functor (ProcedureDeclareSection r)
+-- deriving instance ConstrainSASNames Foldable r => Foldable (ProcedureDeclareSection r)
+-- deriving instance ConstrainSASNames Traversable r => Traversable (ProcedureDeclareSection r)
+instance Functor (ProcedureDeclareSection r) where
+  fmap = undefined
+instance Foldable (ProcedureDeclareSection r) where
+  foldMap = undefined
+instance Traversable (ProcedureDeclareSection r) where
+  traverse = undefined
 
-data ProcedureItemList1 r a
+data ProcedureItemList1Item r a
     = ItemList1TypeDefinition a (TypeDefinition r a)
     | ItemList1CursorDeclaration a (CursorDeclaration r a)
     | ItemList1ItemDeclaration a (ItemDeclaration r a)
     | ItemList1FunctionDeclaration a (FunctionDeclaration r a)
     | ItemList1ProcedureDeclaration a (ProcedureDeclaration r a)
-    deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
-data ProcedureItemList2 r a
+deriving instance Generic (ProcedureItemList1Item r a)
+deriving instance ConstrainSNames Show r a => Show (ProcedureItemList1Item r a)
+deriving instance ConstrainSASNames Functor r => Functor (ProcedureItemList1Item r)
+deriving instance ConstrainSASNames Foldable r => Foldable (ProcedureItemList1Item r)
+deriving instance ConstrainSASNames Traversable r => Traversable (ProcedureItemList1Item r)
+
+data ProcedureItemList2Item r a
     = ItemList2CursorDeclaration a (CursorDeclaration r a)
     | ItemList2CursorDefinition a (CursorDefinition r a)
     | ItemList2FunctionDeclaration a (FunctionDeclaration r a)
     | ItemList2FunctionDefinition a (FunctionDefinition r a)
     | ItemList2ProcedureDeclaration a (ProcedureDeclaration r a)
     | ItemList2ProcedureDefinition a (ProcedureDefinition r a)
-    deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+deriving instance Generic (ProcedureItemList2Item r a)
+deriving instance ConstrainSNames Show r a => Show (ProcedureItemList2Item r a)
+deriving instance ConstrainSASNames Functor r => Functor (ProcedureItemList2Item r)
+deriving instance ConstrainSASNames Foldable r => Foldable (ProcedureItemList2Item r)
+deriving instance ConstrainSASNames Traversable r => Traversable (ProcedureItemList2Item r)
 
 data ProcedureBody r a = ProcedureBody
   { procedureBodyInfo :: a
@@ -420,8 +440,19 @@ data Pragma r a = Pragma a
 
 data TypeDefinition r a = TypeDefinition a
   deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
-data ItemDeclaration r a = ItemDeclaration a
-  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data ItemDeclaration r a
+  = ItemCollectionVariableDeclaration (CollectionVariableDeclaration r a)
+  | ItemConstantDeclaration (ConstantDeclaration r a)
+  | ItemCursorVariableDeclaration (CursorVariableDeclaration r a)
+  | ItemExceptionDeclaration (ExceptionDeclaration r a)
+  | ItemRecordVariableDeclaration (RecordVariableDeclaration r a)
+  | ItemVariableDeclaration (VariableDeclaration r a)
+  
+deriving instance Generic (ItemDeclaration r a)
+deriving instance ConstrainSNames Show r a => Show (ItemDeclaration r a)
+deriving instance ConstrainSASNames Functor r => Functor (ItemDeclaration r)
+deriving instance ConstrainSASNames Foldable r => Foldable (ItemDeclaration r)
+deriving instance ConstrainSASNames Traversable r => Traversable (ItemDeclaration r)
 
 data CursorDeclaration r a = CursorDeclaration a
   deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
@@ -435,6 +466,41 @@ data ProcedureDeclaration r a = ProcedureDeclaration a
   deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
 data ProcedureDefinition r a = ProcedureDefinition a
   deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+
+data CollectionVariableDeclaration r a = CollectionVariableDeclaration a
+  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data ConstantDeclaration r a = ConstantDeclaration a 
+  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data CursorVariableDeclaration r a = CursorVariableDeclaration a
+  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data ExceptionDeclaration r a = ExceptionDeclaration a
+  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data RecordVariableDeclaration r a = RecordVariableDeclaration a
+  deriving (Generic, Data, Eq, Ord, Show, Functor, Foldable, Traversable)
+data VariableDeclaration r a = VariableDeclaration
+  { variableInfo :: a
+  , variableName :: T.Text
+  , dataType :: DataType r a
+  , variableImpl :: Maybe (VariableDeclarationContext r a)
+  }
+
+deriving instance Generic (VariableDeclaration r a)
+deriving instance ConstrainSNames Show r a => Show (VariableDeclaration r a)
+deriving instance ConstrainSASNames Functor r => Functor (VariableDeclaration r)
+deriving instance ConstrainSASNames Foldable r => Foldable (VariableDeclaration r)
+deriving instance ConstrainSASNames Traversable r => Traversable (VariableDeclaration r)
+
+data VariableDeclarationContext r a = VariableDeclarationContext
+  { variableDeclarationContextInfo :: a
+  , variableDeclarationContextNullable :: Bool
+  , variableDeclarationContextExpression :: Expression r a
+  }
+deriving instance Generic (VariableDeclarationContext r a)
+deriving instance ConstrainSNames Show r a => Show (VariableDeclarationContext r a)
+deriving instance ConstrainSASNames Functor r => Functor (VariableDeclarationContext r)
+deriving instance ConstrainSASNames Foldable r => Foldable (VariableDeclarationContext r)
+deriving instance ConstrainSASNames Traversable r => Traversable (VariableDeclarationContext r)
+
 
 data ProcedureStatementBase r a
   = ProcedureStatementBase01 (AssignmentStatement r a)
